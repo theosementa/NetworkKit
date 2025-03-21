@@ -1,0 +1,95 @@
+//
+//  NetworkService.swift
+//  NetworkKit
+//
+//  Created by Theo Sementa on 03/02/2025.
+//
+
+import Foundation
+
+/// A protocol defining the necessary methods for a network service.
+public protocol NetworkServiceProtocol {
+    
+    /// Sends a request and decodes the response.
+    /// - Parameters:
+    ///   - apiBuilder: An object that builds the API request.
+    ///   - responseModel: The type of the response model to decode.
+    /// - Returns: A decoded response of type `T`.
+    /// - Throws: An error if the request or decoding fails.
+    static func sendRequest<T: Decodable>(apiBuilder: APIRequestBuilder, responseModel: T.Type) async throws -> T
+
+    /// Sends a request without expecting a response.
+    /// - Parameters:
+    ///   - apiBuilder: An object that builds the API request.
+    /// - Throws: An error if the request fails.
+    static func sendRequest(apiBuilder: APIRequestBuilder) async throws
+}
+
+/// A class that provides network services and handles requests.
+public class NetworkService: NetworkServiceProtocol {
+
+    // MARK: - With Response
+
+    /// Private method to send a request and decode the response.
+    /// - Parameters:
+    ///   - apiBuilder: An object that builds the API request.
+    ///   - responseModel: The type of the response model to decode.
+    /// - Returns: A decoded response of type `T`.
+    /// - Throws: An error if the request or decoding fails.
+    static public func sendRequest<T: Decodable>(apiBuilder: APIRequestBuilder, responseModel: T.Type) async throws -> T {
+        do {
+            guard let urlRequest = apiBuilder.urlRequest else { throw NetworkError.badRequest }
+
+            let (data, response) = try await URLSession.shared.data(for: urlRequest)
+            let networkReponse: NetworkResponse = .init(
+                data: data,
+                response: response,
+                method: urlRequest.httpMethod
+            )
+
+            guard let dataToDecode = try mapResponse(response: networkReponse) else {
+                throw NetworkError.parsingError
+            }
+
+            return try decodeResponse(dataToDecode: dataToDecode, responseModel: responseModel)
+        } catch let error as NetworkError {
+            throw error
+        }
+    }
+
+    /// Decodes the response data to the specified model.
+    /// - Parameters:
+    ///   - dataToDecode: The data to decode.
+    ///   - responseModel: The type of the response model to decode.
+    /// - Returns: A decoded response of type `T`.
+    /// - Throws: An error if decoding fails.
+    static private func decodeResponse<T: Decodable>(dataToDecode: Data, responseModel: T.Type) throws -> T {
+        do {
+            let results = try JSONDecoder().decode(responseModel, from: dataToDecode)
+            return results
+        } catch {
+            throw NetworkError.parsingError
+        }
+    }
+
+    // MARK: - Without Response
+
+    /// Private method to send a request without expecting a response.
+    /// - Parameters:
+    ///   - apiBuilder: An object that builds the API request.
+    /// - Throws: An error if the request fails.
+    static public func sendRequest(apiBuilder: APIRequestBuilder) async throws {
+        do {
+            guard let urlRequest = apiBuilder.urlRequest else { throw NetworkError.badRequest }
+            let (_, response) = try await URLSession.shared.data(for: urlRequest)
+            let networkReponse: NetworkResponse = .init(
+                response: response,
+                method: urlRequest.httpMethod
+            )
+
+            _ = try mapResponse(response: networkReponse)
+        } catch let error as NetworkError {
+            throw error
+        }
+    }
+}
