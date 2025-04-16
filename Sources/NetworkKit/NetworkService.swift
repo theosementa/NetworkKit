@@ -26,7 +26,16 @@ public protocol NetworkServiceProtocol {
 }
 
 /// A class that provides network services and handles requests.
-public class NetworkService: NetworkServiceProtocol {
+public struct NetworkService: NetworkServiceProtocol {
+    
+    static public func cancelAllTasks() {
+        let session = URLSession.shared
+        session.getAllTasks { tasks in
+            tasks.forEach { task in
+                task.cancel()
+            }
+        }
+    }
 
     // MARK: - With Response
 
