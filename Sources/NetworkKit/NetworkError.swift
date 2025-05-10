@@ -60,22 +60,27 @@ struct NetworkResponse {
     var data: Data?
     var response: URLResponse
     var method: String?
+    var body: Data?
 }
 
-func processResponse(response: URLResponse, method: String?) throws -> HTTPURLResponse {
-    guard let httpResponse = response as? HTTPURLResponse else {
+func processResponse(response: NetworkResponse) throws -> HTTPURLResponse {
+    guard let httpResponse = response.response as? HTTPURLResponse else {
         throw NetworkError.internalError
     }
 
     if let url = httpResponse.url {
-        print("🛜 \(method ?? "") | \(httpResponse.statusCode) -> \(url)")
+        print("🛜 \(response.method ?? "") | \(httpResponse.statusCode) -> \(url)")
+        if let body = response.body {
+            let bodyString = String(data: body, encoding: .utf8) ?? ""
+            print("🛜 BODY: \(bodyString)")
+        }
     }
 
     return httpResponse
 }
 
 func mapResponse(response: NetworkResponse) throws -> Data? {
-    let httpResponse = try processResponse(response: response.response, method: response.method)
+    let httpResponse = try processResponse(response: response)
     return try handleStatusCode(httpResponse.statusCode, data: response.data)
 }
 

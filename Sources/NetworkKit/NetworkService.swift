@@ -16,7 +16,7 @@ public protocol NetworkServiceProtocol {
     ///   - responseModel: The type of the response model to decode.
     /// - Returns: A decoded response of type `T`.
     /// - Throws: An error if the request or decoding fails.
-    static func sendRequest<T: Decodable>(apiBuilder: APIRequestBuilder, responseModel: T.Type) async throws -> T
+    static func sendRequest<T: Decodable>(apiBuilder: APIRequestBuilder, responseModel: T.Type, printBody: Bool) async throws -> T
 
     /// Sends a request without expecting a response.
     /// - Parameters:
@@ -45,7 +45,11 @@ public struct NetworkService: NetworkServiceProtocol {
     ///   - responseModel: The type of the response model to decode.
     /// - Returns: A decoded response of type `T`.
     /// - Throws: An error if the request or decoding fails.
-    static public func sendRequest<T: Decodable>(apiBuilder: APIRequestBuilder, responseModel: T.Type) async throws -> T {
+    static public func sendRequest<T: Decodable>(
+        apiBuilder: APIRequestBuilder,
+        responseModel: T.Type,
+        printBody: Bool = false
+    ) async throws -> T {
         do {
             guard let urlRequest = apiBuilder.urlRequest else { throw NetworkError.badRequest }
 
@@ -53,9 +57,10 @@ public struct NetworkService: NetworkServiceProtocol {
             let networkReponse: NetworkResponse = .init(
                 data: data,
                 response: response,
-                method: urlRequest.httpMethod
+                method: urlRequest.httpMethod,
+                body: printBody ? urlRequest.httpBody : nil
             )
-
+            
             guard let dataToDecode = try mapResponse(response: networkReponse) else {
                 throw NetworkError.parsingError
             }
