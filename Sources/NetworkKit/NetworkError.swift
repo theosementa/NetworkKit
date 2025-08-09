@@ -20,6 +20,8 @@ public enum NetworkError: Error, LocalizedError, CaseIterable {
     case timeout
     case unknown
     case upgradeRequired
+    case noConnection
+    case custom(message: String)
 
     public var errorDescription: String {
         switch self {
@@ -34,7 +36,9 @@ public enum NetworkError: Error, LocalizedError, CaseIterable {
         case .noInternet:               return "No internet connection"
         case .timeout:                  return "Request timed out"
         case .unknown:                  return "Unknown error"
-        case .upgradeRequired:           return "Upgrade required"
+        case .upgradeRequired:          return "Upgrade required"
+        case .noConnection:             return "No connection available"
+        case .custom(let message):      return message
         }
     }
 
@@ -52,8 +56,26 @@ public enum NetworkError: Error, LocalizedError, CaseIterable {
         case .timeout:                  return 408
         case .unknown:                  return 520
         case .upgradeRequired:          return 426
+        case .noConnection:             return 503
+        case .custom:                   return 520
         }
     }
+    
+    public static var allCases: [NetworkError] = [
+        .notFound,
+        .unauthorized,
+        .badRequest,
+        .parsingError,
+        .conflict,
+        .fieldIsIncorrectlyFilled,
+        .internalError,
+        .refreshTokenFailed,
+        .noInternet,
+        .timeout,
+        .unknown,
+        .upgradeRequired,
+        .noConnection
+    ]
 }
 
 struct NetworkResponse {
