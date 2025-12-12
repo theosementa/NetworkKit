@@ -13,7 +13,7 @@
 To use this package, add it to your Swift Package Manager (SPM) dependencies and link it to your main app target.
 
 ```swift
-
+https://github.com/theosementa/NetworkKit.git
 ```
 
 ## Usage
@@ -26,7 +26,7 @@ Define all the API paths that will be used within your application inside the `N
 import Foundation
 
 struct NetworkPath {
-    static let baseURL: String = "https://neopixl.com"
+    static let baseURL: String = "https://my-domain.com"
     
     struct Person {
         static let persons: String = "/persons"
@@ -225,10 +225,11 @@ extension PersonService {
 To avoid unnecessary API calls, you can create a store that caches data locally. This allows your application to use previously fetched data instead of requesting the same information multiple times.
 
 ```swift
-final class PersonStore: ObservableObject {
+@Observable
+final class PersonStore {
     static let shared = PersonStore()
     
-    @Published var persons: [PersonModel] = []
+    var persons: [PersonModel] = []
 }
 
 extension PersonStore {
