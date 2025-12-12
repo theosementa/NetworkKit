@@ -13,7 +13,7 @@
 To use this package, add it to your Swift Package Manager (SPM) dependencies and link it to your main app target.
 
 ```swift
-https://github.com/theosementa/NetworkKit.git
+.package(url: "https://github.com/theosementa/NetworkKit", branch: "1.0.1")
 ```
 
 ## Usage
