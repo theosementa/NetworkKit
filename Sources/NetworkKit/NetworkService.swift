@@ -67,7 +67,9 @@ public struct NetworkService: NetworkServiceProtocol {
             }
 
             return try decodeResponse(dataToDecode: dataToDecode, responseModel: responseModel)
-        } catch let error as NetworkError {
+        } catch let error {
+            print("🔥 RETRY WITH CO : \(retryWithConnection)")
+            print("🔥 NetworkMonitor.shared.isConnected : \(NetworkMonitor.shared.isConnected)")
             if retryWithConnection && NetworkMonitor.shared.isConnected == false {
                 guard let urlRequest = apiBuilder.urlRequest else { throw NetworkError.badRequest }
                 
@@ -137,7 +139,7 @@ public struct NetworkService: NetworkServiceProtocol {
             )
 
             _ = try mapResponse(response: networkReponse)
-        } catch let error as NetworkError {
+        } catch let error {
             if retryWithConnection && NetworkMonitor.shared.isConnected == false {
                 let store = FileDeferredRequestStore()
                 try store.enqueue(urlRequest)
