@@ -16,13 +16,13 @@ public protocol NetworkServiceProtocol {
     ///   - responseModel: The type of the response model to decode.
     /// - Returns: A decoded response of type `T`.
     /// - Throws: An error if the request or decoding fails.
-    static func sendRequest<T: Decodable>(apiBuilder: APIRequestBuilder, responseModel: T.Type, printBody: Bool) async throws -> T
+    static func sendRequest<T: Decodable>(apiBuilder: APIRequestBuilder, responseModel: T.Type, retryWithConnection: Bool) async throws -> T
 
     /// Sends a request without expecting a response.
     /// - Parameters:
     ///   - apiBuilder: An object that builds the API request.
     /// - Throws: An error if the request fails.
-    static func sendRequest(apiBuilder: APIRequestBuilder) async throws
+    static func sendRequest(apiBuilder: APIRequestBuilder, retryWithConnection: Bool) async throws
 }
 
 /// A class that provides network services and handles requests.
@@ -48,7 +48,7 @@ public struct NetworkService: NetworkServiceProtocol {
     static public func sendRequest<T: Decodable>(
         apiBuilder: APIRequestBuilder,
         responseModel: T.Type,
-        printBody: Bool = false
+        retryWithConnection: Bool = NetworkConfiguration.shared.isUrlRequestStoredByDefault
     ) async throws -> T {
         do {
             guard let urlRequest = apiBuilder.urlRequest else { throw NetworkError.badRequest }
@@ -57,8 +57,7 @@ public struct NetworkService: NetworkServiceProtocol {
             let networkReponse: NetworkResponse = .init(
                 data: data,
                 response: response,
-                method: urlRequest.httpMethod,
-                body: printBody ? urlRequest.httpBody : nil
+                method: urlRequest.httpMethod
             )
             
             guard let dataToDecode = try mapResponse(response: networkReponse) else {
@@ -67,6 +66,13 @@ public struct NetworkService: NetworkServiceProtocol {
 
             return try decodeResponse(dataToDecode: dataToDecode, responseModel: responseModel)
         } catch let error as NetworkError {
+            if retryWithConnection && NetworkMonitor.shared.isConnected == false {
+                guard let urlRequest = apiBuilder.urlRequest else { throw NetworkError.badRequest }
+                
+                let store = FileDeferredRequestStore()
+                try store.enqueue(urlRequest)
+            }
+            
             throw error
         }
     }
@@ -92,7 +98,10 @@ public struct NetworkService: NetworkServiceProtocol {
     /// - Parameters:
     ///   - apiBuilder: An object that builds the API request.
     /// - Throws: An error if the request fails.
-    static public func sendRequest(apiBuilder: APIRequestBuilder) async throws {
+    static public func sendRequest(
+        apiBuilder: APIRequestBuilder,
+        retryWithConnection: Bool = NetworkConfiguration.shared.isUrlRequestStoredByDefault
+    ) async throws {
         do {
             guard let urlRequest = apiBuilder.urlRequest else { throw NetworkError.badRequest }
             let (_, response) = try await URLSession.shared.data(for: urlRequest)
@@ -103,6 +112,13 @@ public struct NetworkService: NetworkServiceProtocol {
 
             _ = try mapResponse(response: networkReponse)
         } catch let error as NetworkError {
+            if retryWithConnection && NetworkMonitor.shared.isConnected == false {
+                guard let urlRequest = apiBuilder.urlRequest else { throw NetworkError.badRequest }
+                
+                let store = FileDeferredRequestStore()
+                try store.enqueue(urlRequest)
+            }
+            
             throw error
         }
     }
