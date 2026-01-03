@@ -74,7 +74,7 @@ public struct NetworkService: NetworkServiceProtocol {
                 guard let urlRequest = apiBuilder.urlRequest else { throw NetworkError.badRequest }
                 
                 let store = FileDeferredRequestStore()
-                try store.enqueue(urlRequest)
+                try await store.enqueue(urlRequest)
             }
             
             throw error
@@ -120,7 +120,7 @@ public struct NetworkService: NetworkServiceProtocol {
                 guard let urlRequest = apiBuilder.urlRequest else { throw NetworkError.badRequest }
                 
                 let store = FileDeferredRequestStore()
-                try store.enqueue(urlRequest)
+                try await store.enqueue(urlRequest)
             }
             
             throw error
@@ -142,7 +142,7 @@ public struct NetworkService: NetworkServiceProtocol {
         } catch let error {
             if retryWithConnection && NetworkMonitor.shared.isConnected == false {
                 let store = FileDeferredRequestStore()
-                try store.enqueue(urlRequest)
+                try await store.enqueue(urlRequest)
             }
             
             throw error
@@ -161,15 +161,15 @@ public extension NetworkService {
         guard networkMonitor.isConnected else { return }
         
         do {
-            var requests = try store.load()
+            var requests = try await store.load()
             requests.sort(by: { $0.createdAt < $1.createdAt })
             
             for request in requests {
                 do {
                     try await Self.sendRequest(urlRequest: request.toUrlRequest())
-                    try store.remove(request)
+                    try await store.remove(request)
                 } catch {
-                    try store.remove(request)
+                    try await store.remove(request)
                 }
             }
         } catch {
