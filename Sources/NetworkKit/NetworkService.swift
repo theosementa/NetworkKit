@@ -152,7 +152,7 @@ public struct NetworkService: NetworkServiceProtocol {
 public extension NetworkService {
     
     @concurrent
-    func retryPendingRequests() async {
+    static func retryPendingRequests() async {
         let networkMonitor = NetworkMonitor.shared
         let store = FileDeferredRequestStore()
         
