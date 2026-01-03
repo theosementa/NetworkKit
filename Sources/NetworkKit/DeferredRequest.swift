@@ -16,7 +16,7 @@ public struct DeferredRequest: Codable, Identifiable {
     public let createdAt: Date
 }
 
-extension DeferredRequest {
+public extension DeferredRequest {
     init?(_ request: URLRequest) {
         guard let url = request.url else { return nil }
         self.id = UUID()
@@ -26,4 +26,16 @@ extension DeferredRequest {
         self.body = request.httpBody
         self.createdAt = .now
     }
+}
+
+public extension DeferredRequest {
+    
+    func toUrlRequest() -> URLRequest {
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.allHTTPHeaderFields = headers
+        request.httpBody = body
+        return request
+    }
+    
 }

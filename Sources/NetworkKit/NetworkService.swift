@@ -23,6 +23,8 @@ public protocol NetworkServiceProtocol {
     ///   - apiBuilder: An object that builds the API request.
     /// - Throws: An error if the request fails.
     static func sendRequest(apiBuilder: APIRequestBuilder, retryWithConnection: Bool) async throws
+    
+    static func sendRequest(urlRequest: URLRequest, retryWithConnection: Bool) async throws
 }
 
 /// A class that provides network services and handles requests.
@@ -122,4 +124,55 @@ public struct NetworkService: NetworkServiceProtocol {
             throw error
         }
     }
+    
+    static public func sendRequest(
+        urlRequest: URLRequest,
+        retryWithConnection: Bool = NetworkConfiguration.shared.isUrlRequestStoredByDefault
+    ) async throws {
+        do {
+            let (_, response) = try await URLSession.shared.data(for: urlRequest)
+            let networkReponse: NetworkResponse = .init(
+                response: response,
+                method: urlRequest.httpMethod
+            )
+
+            _ = try mapResponse(response: networkReponse)
+        } catch let error as NetworkError {
+            if retryWithConnection && NetworkMonitor.shared.isConnected == false {
+                let store = FileDeferredRequestStore()
+                try store.enqueue(urlRequest)
+            }
+            
+            throw error
+        }
+    }
+    
+}
+
+public extension NetworkService {
+    
+    @concurrent
+    func retryPendingRequests() async {
+        let networkMonitor = NetworkMonitor.shared
+        let store = FileDeferredRequestStore()
+        
+        guard networkMonitor.isConnected else { return }
+        
+        do {
+            var requests = try store.load()
+            requests.sort(by: { $0.createdAt < $1.createdAt })
+            
+            for request in requests {
+                do {
+                    try await Self.sendRequest(urlRequest: request.toUrlRequest())
+                    try store.remove(request)
+                } catch {
+                    try store.remove(request)
+                }
+            }
+        } catch {
+            print("RetryManager error:", error)
+        }
+    }
+    
 }
